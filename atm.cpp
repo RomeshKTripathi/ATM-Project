@@ -17,7 +17,7 @@
 #define CLOSE_BTM cout << "+--------------------------------+-----------+-------------------+----------+" << endl;
 
 #define SEP_DATA_1 cout                                                                                                     \
-                       << "+--------------------------------+-----------+-------------------+----------+---------+" << endl  \
+                       << "+--------------------------------+-----------+-------------------+----------+---------+" << endl \
                        << "|   USER NAME                    |  ACC. NO. |  ACC BALANCE      |  STATUS  |  PIN    |" << endl \
                        << "+--------------------------------+-----------+-------------------+----------+---------+" << endl;
 #define CLOSE_BTM_1 cout << "+--------------------------------+-----------+-------------------+----------+---------+" << endl;
@@ -39,11 +39,11 @@ private:
     char name[40];
     int pin;
     int accNo = 0;
-    double balance = 0.0;
+    double balance = 9.5;
     bool life = true;
 
 public:
-    
+
     int enterValidPin()
     {
         char ch;
@@ -148,11 +148,12 @@ public:
                 }
                 if (find)
                     cout << "\nRecord Updated Successfully.\n ";
-                else{
+                else
+                {
                     system("cls");
                     cout << "\nRecord Not Found...!\n";
                     return;
-                    }
+                }
             }
         }
         else
@@ -249,7 +250,13 @@ public:
                 {
                     if (this->accNo == acn and this->pin == passcode)
                     {
-                        return true;
+                        if(this->life){
+                            return true;
+                        }else{
+                            cout<<"Sorry, Your Account is Deactivated...\nRequest the Admin to Activate It... ";
+                            getch();
+                            return false;
+                        }
                     }
                     else
                     {
@@ -282,14 +289,15 @@ public:
 
         if (is_exists(ACC_DATA_FILE))
         {
-            
+
             cout << "Enter name : ";
             cin.getline(name, NAME_MAX_LEN);
             cout << "Enter 4 Numeric Digit Pin Do not include '0' : ";
             pin = enterValidPin();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             accNo = getAccNoFromLastRecord();
-            life= true;
+            life = true;
+            balance = 4.5;
             ofstream fout;
             fout.open(ACC_DATA_FILE, ios::app | ios::binary);
             fout.write((char *)this, sizeof(*this));
@@ -452,6 +460,22 @@ public:
     //Description: superDelete() function is also used for deleting an Account from file By the username
     // function is used by admin | this function is made for comfort of admin in deleting the account containig the unique name in whole file.
 
+    void displayMyData(){
+        system("cls");
+        string myLife;
+        if(this->life){
+            myLife = "Active";
+        }else myLife = "Closed";
+        setfill(' ');
+        cout<<"+-----------------------------------------------------+"<<endl
+            <<"|  Name        :  "<<setw(34)<<left<<this->name<<"  |"<<endl
+            <<"|  Account No  :  "<<setw(34)<<left<<this->accNo<<"  |"<<endl
+            <<"|  Balance     :  "<<setw(34)<<left<<setprecision(2)<<this->balance<<"  |"<<endl
+            <<"|  Status      :  "<<setw(34)<<left<<myLife<<"  |"<<endl
+            <<"|  Pin         :  "<<setw(34)<<left<<this->pin<<"  |"<<endl
+            <<"+-----------------------------------------------------+\n"<<endl;
+    }
+
     void viewMyAccount(int &acn, int &passcode)
     {
 
@@ -462,8 +486,15 @@ public:
             if (fin.is_open())
             {
                 fin.read((char *)this, sizeof(*this));
-                if (fin.eof())
+                while (!fin.eof())
                 {
+                    if (this->accNo == acn && this->pin == passcode)
+                    {
+                        displayMyData();
+                        fin.close();
+                        return;
+                    }else
+                    fin.read((char*)this,sizeof(*this));
                 }
             }
             else
@@ -482,38 +513,168 @@ public:
     //Description: viewMyAccount() function is used to view Individual Account Information
     //function is used by Normal user.
 
-    void updateMyName(int &acn, int &passcode) {
+    void updateMyName(int &acn, int &passcode)
+    {
         system("cls");
         string u_name;
-        cin.ignore(numeric_limits<streamsize>::max(),'\n');
-        cout<<"Enter New Name to Update : ";
-        getline(cin,u_name);
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Enter New Name to Update : ";
+        getline(cin, u_name);
 
         fstream file;
-        file.open(ACC_DATA_FILE,ios::in | ios::out | ios::binary);
-        if(file.is_open()){
-            file.read((char*)this,sizeof(*this));
-            while(!file.eof()){
-                if(this->pin == passcode && this->accNo == acn){
-                    file.seekp(file.tellg()- sizeof(*this));
-                    strcpy(this->name,u_name.c_str());
-                    file.write((char*)this,sizeof(*this));
-                    cout<<"Name Updated Successfully...\n";
+        file.open(ACC_DATA_FILE, ios::in | ios::out | ios::binary);
+        if (file.is_open())
+        {
+            file.read((char *)this, sizeof(*this));
+            while (!file.eof())
+            {
+                if (this->pin == passcode && this->accNo == acn)
+                {
+                    file.seekp(file.tellg() - sizeof(*this));
+                    strcpy(this->name, u_name.c_str());
+                    file.write((char *)this, sizeof(*this));
+                    cout << "Name Updated Successfully...\n";
                     file.close();
+                    return;
+                }
+                else
+                {
+                    file.read((char *)this, sizeof(*this));
+                }
+            }
+        }
+        else
+        {
+            cout << "Can't open file...\n";
+            return;
+        }
+    }
+    void updateMyPin(int &acn, int &passcode) {
+        int n_pin;
+        system("cls");
+        cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        cout<<"Enter New 4 digit pin : ";
+        n_pin = enterValidPin();
+        fstream file ;
+        file.open(ACC_DATA_FILE,ios::in | ios::out | ios::binary);
+        file.seekg(0);
+        file.read((char*)this,sizeof(*this));
+        if(!file.eof()){
+            while(!file.eof()){
+                if(this->accNo == acn && this->pin == passcode){
+                    this->pin = n_pin;
+                    file.seekp(file.tellg()-sizeof(*this));
+                    file.write((char*)this, sizeof(*this));
+                    cout<<"\nPin Updated Successfully...\n";
+                    passcode = n_pin;
                     return;
                 }else{
                     file.read((char*)this,sizeof(*this));
                 }
             }
-            
+            return ;
+
         }else{
-            cout<<"Can't open file...\n";
+            cout<<"Data not found..\n";
             return;
         }
+
+
     }
-    void updateMyPin(int &acn, int &passcode) {}
-    void depositMoney(int &acn, int &passcode) {}
-    void withdrawAmount(int &acn, int &passcode) {}
+    void depositMoney(int &acn, int &passcode) {
+        system("cls");
+        double amount;
+        cout<<"Amount should be within range of 5 - 20,000 \nEnter Amount To Deposit : ";
+        cin>>amount;
+        amount = static_cast<double>(amount);
+
+        if(amount <=20000 && amount>5){
+            fstream file;
+            if(is_exists(ACC_DATA_FILE)){
+                file.open(ACC_DATA_FILE,ios::in | ios::out | ios::binary);
+                if(file.is_open()){
+                    file.seekg(0);
+                    file.read((char*)this,sizeof(*this));
+                    while(!file.eof()){
+                        if(this->accNo == acn && this->pin == passcode){
+                            this->balance += amount;
+                            file.seekp(file.tellg() - sizeof(*this));
+                            file.write((char*)this,sizeof(*this));
+                            file.close();
+                            cout<<"Deposit Complete...!\n";
+                            return;
+                        }else{
+                            file.read((char*)this,sizeof(*this));
+                        }
+                    }
+                }else{
+                    cout<<"Can't open file...!\n";
+                    return;
+                }
+            }
+        }else{
+            cout<<"Enter Valid Amount...\n";
+            getch();
+            depositMoney(acn,passcode);
+        }
+    }
+    bool validateWithdrawalAmount(int &acn,int &passcode,double &amount){
+        if(is_exists(ACC_DATA_FILE)){
+            ifstream fin;
+            fin.open(ACC_DATA_FILE,ios::in | ios::binary);
+            if(fin.is_open()){
+                fin.read((char*)this,sizeof(*this));
+                while(!fin.eof()){
+                    if(this->accNo == acn && this->pin == passcode){
+                        if(this->balance >= (amount+0.5)){
+                            return true;
+                        }else{
+                            return false;
+                        }
+                    }else{
+                        fin.read((char*)this,sizeof(*this));
+                    }
+                }
+            }else{
+                system("cls");
+                cout<<"Can't Open File...!\n";
+                return false;
+            }
+        }
+    }
+    void withdrawAmount(int &acn, int &passcode) {
+        double amount;
+        cout<<"Enter Amount to Withdraw : ";
+        cin>>amount;
+        amount = static_cast<double>(amount);
+        if(validateWithdrawalAmount(acn,passcode,amount)){
+            fstream file;
+            file.open(ACC_DATA_FILE,ios::in | ios::out | ios::binary);
+            file.seekg(0);
+            if(file.is_open()){
+                file.read((char*)this,sizeof(*this));
+                while(!file.eof()){
+                    if(this->accNo == acn && this->pin == passcode){
+                        this->balance -= (amount+0.5);
+                        file.seekp(file.tellg() - sizeof(*this));
+                        file.write((char*)this,sizeof(*this));
+                        file.close();
+
+                        cout<<"Withdrawal Successfull...\n";
+                        return ;
+                    }else{
+                        file.read((char*)this,sizeof(*this));
+                    }
+                }
+            }
+
+
+        }else{
+            system("cls");
+            cout<<"\nInvalid Amount enterd...\nPlease Enter Valid Amount...!\n";
+            withdrawAmount(acn,passcode);
+        }
+    }
 
     void normalUser()
     {
@@ -530,7 +691,7 @@ public:
         }
         int again;
     again:
-    cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         cout << "+---------------------------------Welcome--------------------------------+" << endl
              << "|   1.   VIEW ACCOUNT INFO                                               |" << endl
              << "|   2.   UPDATE NAME                                                     |" << endl
@@ -557,7 +718,7 @@ public:
             goto again;
         case 3:
             updateMyPin(acn, pin);
-            system("cls");
+            // cin.ignore(numeric_limits<streamsize>::max(),'\n');
             goto again;
         case 4:
             withdrawAmount(acn, pin);
@@ -736,6 +897,7 @@ public:
             goto again;
         }
     }
+
 };
 
 int main()
