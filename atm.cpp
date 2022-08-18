@@ -3,17 +3,24 @@
 #include <conio.h>
 #include <cstring>
 #include <iomanip>
+#include <string>
 #include <limits>
 
-
-#define ACC_DATA_FILE "atm.dat" //Main data file contains All Account Records.
+#define ACC_DATA_FILE "atm.dat"      //Main data file contains All Account Records.
 #define ACC_TEMP_FILE "temp_acc.dat" //Temprory data file used with delete operation.
-#define NAME_MAX_LEN 40 //Maximul length of the User name.
-#define CLOSE_BTM cout << "+--------------------------------+----------------+-------------------+" << endl;
+#define NAME_MAX_LEN 40              //Maximul length of the User name.
 // above macro used for adding bottom line in table (show all records).
-#define SEP_DATA cout << "+--------------------------------+----------------+-------------------+" << endl \
-                      << "|   USER NAME                    |  ACC. NO.      |  ACC BALANCE      |" << endl \
-                      << "+--------------------------------+----------------+-------------------+" << endl;
+
+#define SEP_DATA cout << "+--------------------------------+-----------+-------------------+----------+" << endl \
+                      << "|   USER NAME                    |  ACC. NO. |  ACC BALANCE      |  STATUS  |" << endl \
+                      << "+--------------------------------+-----------+-------------------+----------+" << endl;
+#define CLOSE_BTM cout << "+--------------------------------+-----------+-------------------+----------+" << endl;
+
+#define SEP_DATA_1 cout                                                                                                     \
+                       << "+--------------------------------+-----------+-------------------+----------+---------+" << endl  \
+                       << "|   USER NAME                    |  ACC. NO. |  ACC BALANCE      |  STATUS  |  PIN    |" << endl \
+                       << "+--------------------------------+-----------+-------------------+----------+---------+" << endl;
+#define CLOSE_BTM_1 cout << "+--------------------------------+-----------+-------------------+----------+---------+" << endl;
 // above macro used for creatin head of the table in (show all records);
 #define CLOSE_LINE cout << "|" << endl;
 // above macro used for closing the right boundry of the line in table.
@@ -32,10 +39,40 @@ private:
     char name[40];
     int pin;
     int accNo = 0;
-    double balance = 10.4;
+    double balance = 0.0;
     bool life = true;
 
 public:
+    
+    int enterValidPin()
+    {
+        char ch;
+        int u_pin = 0;
+        string s_pin;
+        for (int i = 0; i < 4; i++)
+        {
+
+            ch = getch();
+            if (ch >= '1' && ch <= '9')
+            {
+                cout << ch;
+                s_pin.push_back(ch);
+                cin.clear();
+            }
+            else
+            {
+                i -= 1;
+            }
+        }
+        u_pin = stoi(s_pin);
+        // cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        cin.clear();
+        return u_pin;
+    }
+
+    //Description: enterValidPin() function is used, to get an valid pin from user
+    //function is used by admin and normal user.
+
     int getAccNoFromLastRecord()
     {
         fstream file;
@@ -45,19 +82,21 @@ public:
             if (file.tellp() != -1)
             {
                 file.seekg(file.tellp() - sizeof(*this));
+                file.read((char *)this, sizeof(*this));
+                file.close();
                 return ((int)(this->accNo) + 1);
             }
-        }
-        else
-        {
-            return 1;
+            else
+            {
+                file.close();
+                return 1;
+            }
         }
     }
 
-    // Above Function will be used to fetch last record of the file : main purpose is to 
+    // Above Function will be used to fetch last record of the file : main purpose is to
     // get the last account number so that the createAccount() function can create new account number based
     // on previous it will save files from containing duplicate data.
-
 
     string &getNameOnly()
     {
@@ -66,7 +105,6 @@ public:
         getline(cin, u_name);
         return u_name;
     }
-
 
     void updateAccount()
     {
@@ -110,8 +148,11 @@ public:
                 }
                 if (find)
                     cout << "\nRecord Updated Successfully.\n ";
-                else
+                else{
+                    system("cls");
                     cout << "\nRecord Not Found...!\n";
+                    return;
+                    }
             }
         }
         else
@@ -125,20 +166,58 @@ public:
 
     void displayAllData() //function to Print Record in format.
     {
+        string acc_status;
+        if (this->life)
+        {
+            acc_status = "ACTIVE";
+        }
+        else
+        {
+            acc_status = "CLOSED";
+        }
         setfill(' ');
         cout << "|   ";
         cout << setw(29) << left;
         cout << name << "|  ";
-        cout << setw(14) << left;
+        cout << setw(9) << left;
         cout << accNo << "|  ";
         cout << setw(17) << left;
-        cout << fixed << setprecision(2) << (double)balance;
+        cout << fixed << setprecision(2) << (double)balance << "|  ";
+        cout << setw(8) << left << acc_status;
         CLOSE_LINE
         CLOSE_BTM
     }
 
     // Description: displayAllData() function is used to display one record at a time from current object(this)
     // function is mainly used by Admin Users
+
+    void displayAllDataAdvance()
+    {
+
+        string acc_status;
+        if (this->life)
+        {
+            acc_status = "ACTIVE";
+        }
+        else
+        {
+            acc_status = "CLOSED";
+        }
+
+        setfill(' ');
+        cout << "|   ";
+        cout << setw(29) << left;
+        cout << name << "|  ";
+        cout << setw(9) << left;
+        cout << accNo << "|  ";
+        cout << setw(17) << left;
+        cout << fixed << setprecision(2) << (double)balance << "|  ";
+        cout << setw(8) << left << acc_status << "|  ";
+        cout << setw(7) << left;
+        cout << pin;
+        CLOSE_LINE
+        CLOSE_BTM_1
+    }
 
     inline bool is_exists(string name)
     {
@@ -151,8 +230,8 @@ public:
         }
         else
             return false;
-    } 
-    
+    }
+
     // Description: is_exists() function is used to check that the any file is exists or not it takes name of the file
     // Function is used by Normal and Admin users (both)
 
@@ -195,7 +274,7 @@ public:
         }
     }
 
-    //Description: checkAuthenticity() function is used to identify the user by given credentials ( Account number , pin) 
+    //Description: checkAuthenticity() function is used to identify the user by given credentials ( Account number , pin)
     // Function is mainly used by Normal User Module
 
     void createAccount()
@@ -203,16 +282,18 @@ public:
 
         if (is_exists(ACC_DATA_FILE))
         {
+            
             cout << "Enter name : ";
             cin.getline(name, NAME_MAX_LEN);
-            cout << "Enter pin : ";
-            cin >> pin;
+            cout << "Enter 4 Numeric Digit Pin Do not include '0' : ";
+            pin = enterValidPin();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             accNo = getAccNoFromLastRecord();
-
+            life= true;
             ofstream fout;
             fout.open(ACC_DATA_FILE, ios::app | ios::binary);
             fout.write((char *)this, sizeof(*this));
+            fout.close();
             cout << "\nAccount Created Successfully...";
             // _sleep(2000);
         }
@@ -225,8 +306,7 @@ public:
     //Description: createAccount() function creates an Account, it takes Username and Pin to create an account.
     // function is mainly used by Admin users.
 
-
-    void readAllRecords()
+    void readAllRecords(const bool &is_advance)
     {
         if (is_exists(ACC_DATA_FILE))
         {
@@ -240,12 +320,22 @@ public:
             }
             else
             {
-                SEP_DATA
+                if (is_advance)
+                    SEP_DATA_1
+                else
+                    SEP_DATA
             }
 
             while (!fin.eof())
             {
-                displayAllData();
+                if (is_advance)
+                {
+                    displayAllDataAdvance();
+                }
+                else
+                {
+                    displayAllData();
+                }
                 fin.read((char *)this, sizeof(*this));
             }
         }
@@ -254,8 +344,8 @@ public:
             cout << "File Not Found...!\n";
         }
     }
-    
-    //Description: readAllRecords() function is used for reading all record from data file 
+
+    //Description: readAllRecords() function is used for reading all record from data file
     // function is mainly used by Admin
 
     void deleteAccount()
@@ -328,7 +418,7 @@ public:
                 fin.read((char *)this, sizeof(*this));
                 while (!fin.eof())
                 {
-                    if (!strcmp(this->name, u_name.c_str()))
+                    if (!strcmpi(this->name, u_name.c_str()))
                     {
                     }
                     else
@@ -337,6 +427,8 @@ public:
                     }
                     fin.read((char *)this, sizeof(*this));
                 }
+                fin.close();
+                fout.close();
             }
             else
             {
@@ -353,34 +445,72 @@ public:
         fout.close();
         remove(ACC_DATA_FILE);
         rename(ACC_TEMP_FILE, ACC_DATA_FILE);
+        system("cls");
         cout << "\nOperation Exicuted Successfully...\n";
     }
 
-    //Description: superDelete() function is also used for deleting an Account from file By the username 
+    //Description: superDelete() function is also used for deleting an Account from file By the username
     // function is used by admin | this function is made for comfort of admin in deleting the account containig the unique name in whole file.
 
-    
-    void viewMyAccount(int &acn, int &passcode) {
+    void viewMyAccount(int &acn, int &passcode)
+    {
 
-        if(is_exists(ACC_DATA_FILE)){
+        if (is_exists(ACC_DATA_FILE))
+        {
             ifstream fin;
-            fin.open(ACC_DATA_FILE,ios::in | ios::binary);
-            if(fin.is_open()){
-
-            }else{
-                cout<<"Unable to open Data file...!\n";
+            fin.open(ACC_DATA_FILE, ios::in | ios::binary);
+            if (fin.is_open())
+            {
+                fin.read((char *)this, sizeof(*this));
+                if (fin.eof())
+                {
+                }
+            }
+            else
+            {
+                cout << "Unable to open Data file...!\n";
                 return;
             }
-        }else{
-            cout<<"Data file not found...!\n";
+        }
+        else
+        {
+            cout << "Data file not found...!\n";
             return;
         }
     }
 
-    //Description: viewMyAccount() function is used to view Individual Account Information 
+    //Description: viewMyAccount() function is used to view Individual Account Information
     //function is used by Normal user.
 
-    void updateMyName(int &acn, int &passcode) {}
+    void updateMyName(int &acn, int &passcode) {
+        system("cls");
+        string u_name;
+        cin.ignore(numeric_limits<streamsize>::max(),'\n');
+        cout<<"Enter New Name to Update : ";
+        getline(cin,u_name);
+
+        fstream file;
+        file.open(ACC_DATA_FILE,ios::in | ios::out | ios::binary);
+        if(file.is_open()){
+            file.read((char*)this,sizeof(*this));
+            while(!file.eof()){
+                if(this->pin == passcode && this->accNo == acn){
+                    file.seekp(file.tellg()- sizeof(*this));
+                    strcpy(this->name,u_name.c_str());
+                    file.write((char*)this,sizeof(*this));
+                    cout<<"Name Updated Successfully...\n";
+                    file.close();
+                    return;
+                }else{
+                    file.read((char*)this,sizeof(*this));
+                }
+            }
+            
+        }else{
+            cout<<"Can't open file...\n";
+            return;
+        }
+    }
     void updateMyPin(int &acn, int &passcode) {}
     void depositMoney(int &acn, int &passcode) {}
     void withdrawAmount(int &acn, int &passcode) {}
@@ -400,6 +530,7 @@ public:
         }
         int again;
     again:
+    cin.ignore(numeric_limits<streamsize>::max(),'\n');
         cout << "+---------------------------------Welcome--------------------------------+" << endl
              << "|   1.   VIEW ACCOUNT INFO                                               |" << endl
              << "|   2.   UPDATE NAME                                                     |" << endl
@@ -411,9 +542,8 @@ public:
              << "|   8.   PRINT TRANSACTION HISTORY                                       |" << endl
              << "|   9.   EXIT                                                            |" << endl
              << "+------------------------------------------------------------------------+" << endl;
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         int choice;
-        cin>>choice;
+        cin >> choice;
         switch (choice)
         {
         case 1:
@@ -422,6 +552,7 @@ public:
             goto again;
         case 2:
             updateMyName(acn, pin);
+            getch();
             system("cls");
             goto again;
         case 3:
@@ -449,92 +580,115 @@ public:
             cout << "Can't Print T.H. Module is Under Development...\n";
             goto again;
         case 9:
-            return ;
+            return;
         default:
             system("cls");
-            cout<<"Invalid Choice...  \nTry Again \n";
+            cout << "Invalid Choice...  \nTry Again \n";
             goto again;
         }
     }
 
-    void deactivateAccount() {}
-    void permanentDeleteChoice()
+    void deactivateAccount()
     {
-        system("cls");
-        int again;
-    again:
-        cout << "+---------------------------------Welcome--------------------------------+" << endl
-             << "|   1.   DELETE BY ACC. NO. AND PIN                                      |" << endl
-             << "|   2.   DELETE BY USERNAME   ! ('Delete Unique Records Only...!')       |" << endl
-             << "|   3.   VIEW ALL RECORDS                                                |" << endl
-             << "|   4.   DISCARD OPERATION                                               |" << endl
-             << "+------------------------------------------------------------------------+" << endl;
-        int choice;
-        cin >> choice;
-        switch (choice)
+        int u_acc, u_pin;
+        cout << "Enter Acc no : ";
+        cin >> u_acc;
+        cout << "Enter Pin : ";
+        cin >> u_pin;
+
+        fstream file;
+        if (is_exists(ACC_DATA_FILE))
         {
-        case 1:
-            system("cls");
-            deleteAccount();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            goto again;
-        case 2:
-            superDelete();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            goto again;
-        case 3:
-            system("cls");
-            readAllRecords();
-            goto again;
-        case 4:
+            file.open(ACC_DATA_FILE, ios::in | ios::out | ios::ate | ios::binary);
+            if (file.is_open())
+            {
+                file.seekg(0);
+                file.read((char *)this, sizeof(*this));
+                if (file.eof())
+                {
+                    cout << "There is no Record in Data File...\n";
+                    return;
+                }
+                else
+                {
+                    while (!file.eof())
+                    {
+                        if (this->pin == u_pin && this->accNo == u_acc)
+                        {
+                            file.seekp(file.tellg() - sizeof(*this));
+                            if (this->life)
+                            {
+                                this->life = false;
+                            }
+                            else
+                            {
+                                cout << "Account is Already Closed, Do you want to Activate is y/n : \n";
+                                char ch;
+                                int re_enter;
+                            re_enter:
+                                ch = getch();
+                                if (ch == 'y' or ch == 'Y')
+                                {
+                                    cout << ch << "\n";
+                                    this->life = true;
+                                    file.write((char *)this, sizeof(*this));
+                                    file.close();
+                                    cout << "Account Activated...\n";
+                                    return;
+                                }
+                                else if (ch == 'n' or ch == 'N')
+                                {
+                                    return;
+                                }
+                                else
+                                    goto re_enter;
+                            }
+
+                            file.write((char *)this, sizeof(*this));
+                            file.close();
+                            cout << "Account Deactivated...\n";
+                            return;
+                        }
+                        else
+                        {
+                            file.read((char *)this, sizeof(*this));
+                        }
+                    }
+                    cout << "Record not found...\n";
+                    return;
+                }
+            }
+            else
+            {
+                cout << "Can't open file...\n";
+                return;
+            }
+        }
+        else
+        {
+            cout << "File not found...\n";
             return;
-        default:
-            system("cls");
-            cout << "Invalid Choice...! \nTry Again \n";
-            goto again;
         }
     }
-    void deleteChoice()
-    {
-        system("cls");
-        int again;
-    again:
-        cout << "+---------------------------------Welcome--------------------------------+" << endl
-             << "|   1.   DEACTIVATE ACCOUNT                                              |" << endl
-             << "|   2.   DELETE ACCOUNT PERMANENTLY                                      |" << endl
-             << "|   3.   DISCARD OPERATION                                               |" << endl
-             << "+------------------------------------------------------------------------+" << endl;
-        int choice;
-        cin >> choice;
-        switch (choice)
-        {
-        case 1:
-            system("cls");
-            deactivateAccount();
-            goto again;
-        case 2:
-            system("cls");
-            permanentDeleteChoice();
-            goto again;
-        case 3:
-            return;
-        default:
-            system("cls");
-            cout << "Invalid Choice, Enter your choice again.\n";
-            goto again;
-        }
-    }
+
     void adminUser()
     {
         system("cls");
         int choice, again;
     again:
-        cout << "+---------------------------------Welcome--------------------------------+" << endl
+        cout << "+----------------------------------ADMIN---------------------------------+" << endl
              << "|   1.   CREATE NEW ACCOUNT                                              |" << endl
-             << "|   2.   DELETE AN ACCOUNT                                               |" << endl
-             << "|   3.   CORRECT USER NAMES  (BY NAME)                                   |" << endl
-             << "|   4.   VIEW ALL RECORDS(ACCOUNTS)                                      |" << endl
-             << "|   5.   EXIT FROM ADMIN PANEL                                           |" << endl
+             << "|   2.   CORRECT USER NAMES  (BY NAME)                                   |" << endl
+             << "|                                                                        |" << endl
+             << "|   3.   VIEW ALL RECORDS(ACCOUNTS)                                      |" << endl
+             << "|   4.   VIEW ALL RECORDS ADVANCE (ACCOUNTS)                             |" << endl
+             << "|                                                                        |" << endl
+             << "|   5.   DEACTIVATE ACCOUNT                                              |" << endl
+             << "|                                                                        |" << endl
+             << "|   6.   DELETE BY USERNAME                                              |" << endl
+             << "|   7.   DELETE BY ACC NO & PIN                                          |" << endl
+             << "|                                                                        |" << endl
+             << "|   8.   EXIT FROM ADMIN PANEL                                           |" << endl
              << "+------------------------------------------------------------------------+" << endl;
         cin >> choice;
         switch (choice)
@@ -544,22 +698,36 @@ public:
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             createAccount();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            goto again;
 
-            goto again;
         case 2:
-            deleteChoice();
-            system("cls");
-            goto again;
-        case 3:
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
             updateAccount();
             goto again;
+        case 3:
+            system("cls");
+            readAllRecords(0);
+            goto again;
         case 4:
             system("cls");
-            readAllRecords();
+            readAllRecords(1);
             goto again;
         case 5:
+            system("cls");
+            deactivateAccount();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            goto again;
+        case 6:
+            superDelete();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            goto again;
+        case 7:
+            system("cls");
+            deleteAccount();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            goto again;
+        case 8:
             return;
         default:
             system("cls");
